@@ -1,0 +1,215 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Juego </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+        }
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background-color: #f0e4d7;
+            overflow: hidden;
+            border: 20px solid #ffb6c1;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .catcher {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 20px;
+            background-color: #ffb6c1;
+            border-radius: 10px;
+        }
+        .cube {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #add8e6;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .ball {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #ff6347;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+        .win-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: #ff69b4;
+            display: none;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center">
+    <div class="game-container">
+        <div class="catcher"></div>
+        <div class="win-message">¡Ganastes! <br>haci como también mi corazón<br></div>
+    </div>
+    <div class="absolute top-4 left-4">
+        <button id="startButton" class="bg-pink-500 text-white px-4 py-2 rounded">Empezar juego</button>
+        <div class="mt-2 text-lg">Puntos: <span id="score">0</span></div>
+    </div>
+    <script>
+        const gameContainer = document.querySelector('.game-container');
+        const catcher = document.querySelector('.catcher');
+        const startButton = document.getElementById('startButton');
+        const scoreDisplay = document.getElementById('score');
+        const winMessage = document.querySelector('.win-message');
+        let score = 0;
+        let gameInterval;
+        let cubes = [];
+        let balls = [];
+        let dropSpeed = 1000;
+        let cubeDropSpeed = 5;
+        let ballDropSpeed = 5;
+        let ballDropInterval = 1000;
+        let extraBallInterval;
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = score;
+            winMessage.style.display = 'none';
+            cubes.forEach(cube => cube.remove());
+            balls.forEach(ball => ball.remove());
+            cubes = [];
+            balls = [];
+            dropSpeed = 1000;
+            cubeDropSpeed = 5;
+            ballDropSpeed = 5;
+            ballDropInterval = 1000;
+            clearInterval(extraBallInterval);
+            gameInterval = setInterval(() => {
+                dropCube();
+                dropBall();
+            }, dropSpeed);
+        }
+
+        function dropCube() {
+            const cube = document.createElement('div');
+            cube.classList.add('cube');
+            cube.style.left = `${Math.random() * (gameContainer.clientWidth - 40)}px`;
+            gameContainer.appendChild(cube);
+            cubes.push(cube);
+
+            let cubeInterval = setInterval(() => {
+                const cubeRect = cube.getBoundingClientRect();
+                const catcherRect = catcher.getBoundingClientRect();
+
+                if (cubeRect.top + cubeRect.height >= catcherRect.top &&
+                    cubeRect.left + cubeRect.width >= catcherRect.left &&
+                    cubeRect.left <= catcherRect.left + catcherRect.width) {
+                    score += 2;
+                    scoreDisplay.textContent = score;
+                    clearInterval(cubeInterval);
+                    cube.remove();
+                    cubes = cubes.filter(c => c !== cube);
+                    if (score >= 30) {
+                        winGame();
+                    } else if (score >= 25) {
+                        increaseBallDrop();
+                    } else if (score >= 20) {
+                        increaseSpeed(300, 15, 15);
+                    } else if (score >= 15) {
+                        increaseSpeed(500, 10, 10);
+                    } else if (score >= 10) {
+                        increaseSpeed(700, 7, 7);
+                    }
+                } else if (cubeRect.top + cubeRect.height >= gameContainer.clientHeight) {
+                    clearInterval(cubeInterval);
+                    cube.remove();
+                    cubes = cubes.filter(c => c !== cube);
+                } else {
+                    cube.style.top = `${cube.offsetTop + cubeDropSpeed}px`;
+                }
+            }, 50);
+        }
+
+        function dropBall() {
+            const ball = document.createElement('div');
+            ball.classList.add('ball');
+            ball.style.left = `${Math.random() * (gameContainer.clientWidth - 20)}px`;
+            gameContainer.appendChild(ball);
+            balls.push(ball);
+
+            let ballInterval = setInterval(() => {
+                const ballRect = ball.getBoundingClientRect();
+                const catcherRect = catcher.getBoundingClientRect();
+
+                if (ballRect.top + ballRect.height >= catcherRect.top &&
+                    ballRect.left + ballRect.width >= catcherRect.left &&
+                    ballRect.left <= catcherRect.left + catcherRect.width) {
+                    score = Math.max(0, score - 3);
+                    scoreDisplay.textContent = score;
+                    clearInterval(ballInterval);
+                    ball.remove();
+                    balls = balls.filter(b => b !== ball);
+                } else if (ballRect.top + ballRect.height >= gameContainer.clientHeight) {
+                    clearInterval(ballInterval);
+                    ball.remove();
+                    balls = balls.filter(b => b !== ball);
+                } else {
+                    ball.style.top = `${ball.offsetTop + ballDropSpeed}px`;
+                }
+            }, 50);
+        }
+
+        function increaseSpeed(newDropSpeed, newCubeDropSpeed, newBallDropSpeed) {
+            clearInterval(gameInterval);
+            dropSpeed = newDropSpeed;
+            cubeDropSpeed = newCubeDropSpeed;
+            ballDropSpeed = newBallDropSpeed;
+            gameInterval = setInterval(() => {
+                dropCube();
+                dropBall();
+            }, dropSpeed);
+        }
+
+        function increaseBallDrop() {
+            clearInterval(extraBallInterval);
+            ballDropInterval = 500;
+            extraBallInterval = setInterval(dropBall, ballDropInterval);
+        }
+
+        function winGame() {
+            clearInterval(gameInterval);
+            clearInterval(extraBallInterval);
+            winMessage.style.display = 'block';
+            cubes.forEach(cube => cube.remove());
+            balls.forEach(ball => ball.remove());
+            cubes = [];
+            balls = [];
+        }
+
+        startButton.addEventListener('click', startGame);
+
+        gameContainer.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const gameContainerRect = gameContainer.getBoundingClientRect();
+            const catcherWidth = catcher.offsetWidth;
+            let newLeft = touch.clientX - gameContainerRect.left - (catcherWidth / 2);
+            newLeft = Math.max(0, Math.min(newLeft, gameContainer.clientWidth - catcherWidth));
+            catcher.style.left = `${newLeft}px`;
+        });
+    </script>
+</body>
+</html>
